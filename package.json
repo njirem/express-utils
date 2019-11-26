@@ -1,13 +1,14 @@
 {
     "name": "@webscaledev/express-utils",
-    "version": "1.0.0",
+    "version": "1.0.0-beta.0",
     "description": "A couple of utilities to make ExpressJS life easier",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
         "test": "jest --ci",
         "test:watch": "jest --watch",
-        "build": "tsc"
+        "build": "tsc",
+        "ci": "npm run build && npm run test"
     },
     "repository": {
         "type": "git",
@@ -18,7 +19,7 @@
         "error"
     ],
     "author": "Merijn",
-    "license": "ISC",
+    "license": "Apache-2.0",
     "bugs": {
         "url": "https://github.com/njirem/express-utils/issues"
     },

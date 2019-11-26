@@ -1,7 +1,8 @@
 src
 .vscode
+.gitignore
+.travis.yml
 coverage
 tslint.json
-.gitignore
 jest.config.js
 tsconfig.json
