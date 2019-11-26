@@ -4,6 +4,9 @@
  * HttpError.Handler can be used as an Express error handler for these errors.
  */
 export class HttpError extends Error {
+    /**
+     * Create an ErrorRequestHandler, to convert HttpErrors into responses in Express
+     */
     static Handler({ interceptor, catchAllErrors }: HandlerOptions = {}): import('express').ErrorRequestHandler {
         return async (err, _req, res, next) => {
             if (!(err instanceof HttpError)) {
@@ -26,6 +29,13 @@ export class HttpError extends Error {
         };
     }
 
+    /**
+     * Create a HttpError based on another Error. Can be useful if a caught error needs to be rethrown with a specific status code and/or message.
+     *
+     * @param cause The original Error that caused this HttpError
+     * @param code The Http status code
+     * @param info Additional information to be passed on
+     */
     static fromError(cause: Error, code?: number, info?: {}): HttpError;
     static fromError(cause: Error, code: number, description: string, info?: {}): HttpError;
     static fromError(cause: Error, code = 500, descriptionOrInfo?: string | {}, info?: {}) {
@@ -47,6 +57,14 @@ export class HttpError extends Error {
 }
 
 export interface HandlerOptions {
+    /**
+     * An interceptor for al the errors, before they are converted into a response.
+     * Can be used to log the error and/or return a new (e.g. redacted) error.
+     */
     interceptor?: (err: HttpError) => void | HttpError | Promise<HttpError | void>;
+    /**
+     * By default the handler will only catch `HttpError`s.
+     * If this option is set to true, the handler will also catch regular errors as status 500 HttpErrors.
+     */
     catchAllErrors?: boolean;
 }

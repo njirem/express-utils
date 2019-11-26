@@ -1,11 +1,18 @@
 import { HttpError } from './HttpError';
 
+/** A class that can be used to set a prefix/postfix to your scope check. */
 export class Scopes {
     constructor(private readonly prefix = '', private readonly postfix = '') { }
 
     private fullScope(scope: string) { return this.prefix + scope + this.postfix; }
     private readableScope(scope: string) { return scope.slice(this.prefix.length, -this.postfix.length || undefined); }
 
+    /**
+     * Will construct a middleware handler, that checks if the user in the request has the given scopes (with the addition of the prefix/postfix).
+     * It will throw a Http 403 if one or more scopes are missing, if no scope information is found, it will throw a 401.
+     *
+     * This middleware assumes scopes are found under: Request.authInfo.scopes.
+     */
     assertRequired(requiredScope: string, ...otherRequiredScopes: string[]): import('express').Handler;
     assertRequired(...scopes: string[]): import('express').Handler {
         const requiredScopes = scopes.map(scope => this.fullScope(scope));
@@ -24,6 +31,17 @@ export class Scopes {
         };
     }
 }
+
+const defaultInstance = new Scopes;
+/**
+ * Will construct a middleware handler, that checks if the user in the request has the given scopes.
+ * It will throw a Http 403 if one or more scopes are missing, if no scope information is found, it will throw a 401.
+ *
+ * This middleware assumes scopes are found under: Request.authInfo.scopes.
+ *
+ * If all of the scopes use a prefix/postfix, you can use the `Scopes` class, to set these.
+ */
+export const assertRequired = defaultInstance.assertRequired.bind(defaultInstance);
 
 declare global {
     namespace Express {
