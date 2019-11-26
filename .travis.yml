@@ -4,7 +4,6 @@ node_js:
 - '10'
 script: npm run ci
 cache: npm
-
 deploy:
   edge: true
   provider: npm
@@ -15,3 +14,5 @@ deploy:
     branch: master
     tags: true
     node: 10
+  api_key:
+    secure: ZMcjHzYJkx2WdxUsxnEih/EeiWOxdQYcsZJRzbYO4zpZqCbV3yqF1bnzMa9+OosXIeioHFKwD4lEcpdAr5JV1PKQBNJRO2Q57l60HnjiuyZYDPc8TlW45ETehcAuZpH4WXHG+iQqK54ep3eMDWApJFcjszFrD1BYA7F9cQ6mawMD3vokBKRQXo0hsxOXc+HB4bXb0hUm63IluRE2WzUzrfIjv4zfltqHCMGzfi6ebzCUAyrPb+7jR5Ff6RlS3MbRcGvD+OhRxsbx/qMWRFAgVjimaxFIorKlAwA74irkaRvhP9uRskdM5x9OSv/r+Vek9F8KtNSLrLkOc3BCXcgSSKvZF5UDLI0QY71QUuHwngdWs1W8fQHjkTA4KM/8c9l4SMpLdEH18b/PIq1eIJTA+5kz05ieD8NCgq1QJw2aH5pfal83anVUTuRmJxMftm67HCEoJ8dIyWFUNI6irmwXc+Xvwp2qDg54si/ZQcwrjDENRW5GAx7FnWdC9/FxWBec6Phdw9HJ59LrQs5VSA3ommvC9hN6wBSQHONe9aEDhSDH7NVgcBM3z1MYYlIt9iDyzs/rg4qfg3R4z6LEpdD4Nbj+tm1kaRhBv8FEw1Qr2oWkbjl6wpJWcnmg3S7IXJv+2/SYquOuwS2wnMDaXXCHtvpPxpT9wDNbMsPSn3f7/3M=
