@@ -42,4 +42,7 @@ app.get(wrapMiddleware(async(req, res) => {
 app.use(HttpError.Handler());
 ```
 
+### Disclaimer
+This is mainly used by me and projects I work on. There could be big issues with the implementation or documentation I haven't noticed because I simply don't use it that way.
 
+So use at your own risk and if some feature or documentation is missing/faulty/etc.: PR's are welcome!
