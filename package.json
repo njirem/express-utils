@@ -1,6 +1,9 @@
 {
     "name": "@webscaledev/express-utils",
     "version": "1.0.0",
+    "publishConfig": {
+        "access": "public"
+    },
     "description": "A couple of utilities to make ExpressJS life easier",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
