@@ -15,7 +15,7 @@ module.exports = {
     globals: {
         'ts-jest': {
             tsConfig: {
-                target: oldNodeVersion ? 'es5' : undefined
+                target: oldNodeVersion ? 'es2015' : undefined
             }
         }
     },

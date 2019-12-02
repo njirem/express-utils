@@ -11,9 +11,9 @@
         "test": "jest --ci",
         "test:watch": "jest --watch",
         "clean": "rm -rf dist",
-        "build": "npm run clean && npm run build:default && npm run build:es5",
+        "build": "npm run clean && npm run build:default && npm run build:es2015",
         "build:default": "tsc --project tsconfig.build.json",
-        "build:es5": "tsc --project tsconfig.build.json --outDir dist/es5 --target es5",
+        "build:es2015": "tsc --project tsconfig.build.json --outDir dist/es5 --target es2015",
         "ci": "npm run build && npm run test"
     },
     "repository": {
