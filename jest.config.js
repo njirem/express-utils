@@ -1,11 +1,11 @@
 'use strict';
-
-const nodeVersion = parseInt(process.versions.node.split('.')[0]);
+const { oldNodeVersion } = require('./compatibility');
 
 module.exports = {
     clearMocks: true,
     restoreMocks: true,
     collectCoverage: true,
+    collectCoverageFrom: ['src/**'],
     coverageDirectory: 'coverage',
     coverageReporters: [
         'html',
@@ -15,10 +15,11 @@ module.exports = {
     globals: {
         'ts-jest': {
             tsConfig: {
-                target: nodeVersion <= 8 ? 'es5' : undefined
+                target: oldNodeVersion ? 'es5' : undefined
             }
         }
     },
+    setupFilesAfterEnv: ['./test-setup.js'],
     transform: {
         '^.+\\.ts?$': 'ts-jest',
     }
