@@ -39,6 +39,7 @@
     },
     "devDependencies": {
         "@types/jest": "^24.0.23",
+        "express": "^4.17.1",
         "jest": "^24.9.0",
         "ts-jest": "^24.2.0",
         "tslint": "^5.20.1",
