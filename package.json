@@ -5,12 +5,15 @@
         "access": "public"
     },
     "description": "A couple of utilities to make ExpressJS life easier",
-    "main": "dist/index.js",
+    "main": "index.js",
     "types": "dist/index.d.ts",
     "scripts": {
         "test": "jest --ci",
         "test:watch": "jest --watch",
-        "build": "tsc",
+        "clean": "rm -rf dist",
+        "build": "npm run clean && npm run build:default && npm run build:es5",
+        "build:default": "tsc --project tsconfig.build.json",
+        "build:es5": "tsc --project tsconfig.build.json --outDir dist/es5 --target es5",
         "ci": "npm run build && npm run test"
     },
     "repository": {
@@ -29,7 +32,9 @@
     "homepage": "https://github.com/njirem/express-utils#readme",
     "dependencies": {
         "@types/express": "^4.17.2",
-        "@types/passport": "^1.0.2"
+        "@types/express-ws": "^3.0.0",
+        "@types/passport": "^1.0.2",
+        "@types/ws": "^6.0.4"
     },
     "devDependencies": {
         "@types/jest": "^24.0.23",

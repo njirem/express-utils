@@ -13,7 +13,6 @@ export class Scopes {
      *
      * This middleware assumes scopes are found under: Request.authInfo.scopes.
      */
-    assertRequired(requiredScope: string, ...otherRequiredScopes: string[]): import('express').Handler;
     assertRequired(...scopes: string[]): import('express').Handler {
         const requiredScopes = scopes.map(scope => this.fullScope(scope));
 
