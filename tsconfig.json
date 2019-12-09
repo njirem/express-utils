@@ -15,10 +15,10 @@
         "pretty": true,
         "stripInternal": true,
         "baseUrl": "src",
+        "rootDir": "src",
         "outDir": "dist"
     },
-    "exclude": [
-        "test-utils.d.ts",
-        "dist"
+    "include": [
+        "src/**/*.ts"
     ]
 }

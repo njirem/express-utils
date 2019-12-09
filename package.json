@@ -1,6 +1,6 @@
 {
     "name": "@webscaledev/express-utils",
-    "version": "1.2.0-beta.0",
+    "version": "1.2.0-beta.1",
     "publishConfig": {
         "access": "public"
     },
@@ -11,10 +11,10 @@
         "test": "jest --ci",
         "test:watch": "jest --watch",
         "clean": "rm -rf dist",
-        "build": "npm run clean && npm run build:default && npm run build:es2015",
+        "build": "npm run build:default && npm run build:es2015",
         "build:default": "tsc --project tsconfig.build.json",
         "build:es2015": "tsc --project tsconfig.build.json --outDir dist/es5 --target es2015",
-        "ci": "npm run build && npm run test"
+        "ci": "npm run clean && npm run test && npm run build"
     },
     "repository": {
         "type": "git",

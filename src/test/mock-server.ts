@@ -139,7 +139,12 @@ class Response<T> extends EventEmitter {
 }
 
 type Method = 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'GET';
-
+interface MockRequest {
+    url: string;
+    method: Method;
+    query: string;
+    body: any;
+}
 declare global {
     namespace MockServer {
         interface Options<T = {}> {
@@ -148,7 +153,7 @@ declare global {
             body?: T | (() => T);
             query?: T | (() => T);
             assertCode: number;
-            requestInterceptor?(req: { url: string; method: Method; body: any; query: string; }, options: Options): any;
+            requestInterceptor?(req: MockRequest, options: Options): MockRequest | void;
             errorHandlers: Array<import('express').ErrorRequestHandler>;
         }
     }
