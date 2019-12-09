@@ -1,4 +1,4 @@
-import { assertUserHasScopes } from './scopes';
+import { assertUserHasScopes } from './assert-scopes';
 
 describe(assertUserHasScopes, () => {
     const res = {} as unknown as import('express').Response;

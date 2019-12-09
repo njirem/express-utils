@@ -3,4 +3,4 @@ export * from './enqueue-execution';
 export * from './HttpError';
 export * from './MapWithDefault';
 export * from './middleware-wrapper';
-export * from './scopes';
+export * from './assert-scopes';
