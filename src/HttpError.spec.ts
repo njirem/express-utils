@@ -63,6 +63,8 @@ describe(HttpError, () => {
     });
 
     describe(HttpError.Handler, () => {
+        const req = {} as any;
+
         it('should send the response with the given code, message and info', async () => {
             const { status, json, next } = await call(new HttpError(418, 'Teapot', { some: 'info' }));
 
@@ -97,14 +99,14 @@ describe(HttpError, () => {
             it('should be able to intercept the handler', async () => {
                 await call(httpError, { interceptor });
 
-                expect(interceptor).toHaveBeenCalledWith(httpError);
+                expect(interceptor).toHaveBeenCalledWith(httpError, req);
             });
 
             it('should always use an HttpError in the interceptor', async () => {
                 const cause = new Error('Regular Error!?');
                 await call(cause, { interceptor, catchAllErrors: true });
 
-                expect(interceptor).toHaveBeenCalledWith(expect.any(HttpError));
+                expect(interceptor).toHaveBeenCalledWith(expect.any(HttpError), req);
                 expect(interceptor.mock.calls[0][0]).toEqual(expect.objectContaining({
                     code: 500, message: 'Regular Error!?', info: { cause }
                 }));
@@ -113,7 +115,7 @@ describe(HttpError, () => {
             it('should still send the error', async () => {
                 const { status, json, next } = await call(httpError, { interceptor });
 
-                expect(interceptor).toHaveBeenCalledWith(httpError);
+                expect(interceptor).toHaveBeenCalledWith(httpError, req);
                 expect(status).toHaveBeenCalledWith(409);
                 expect(json).toHaveBeenCalledWith({ error: 'Nope!', info: {} });
                 expect(next).not.toHaveBeenCalled();
@@ -123,7 +125,7 @@ describe(HttpError, () => {
                 interceptor.mockReturnValueOnce(new HttpError(500, 'Yes!'));
                 const { status, json, next } = await call(httpError, { interceptor });
 
-                expect(interceptor).toHaveBeenCalledWith(httpError);
+                expect(interceptor).toHaveBeenCalledWith(httpError, req);
                 expect(status).toHaveBeenCalledWith(500);
                 expect(json).toHaveBeenCalledWith({ error: 'Yes!', info: {} });
                 expect(next).not.toHaveBeenCalled();
@@ -133,7 +135,7 @@ describe(HttpError, () => {
                 interceptor.mockResolvedValueOnce(new HttpError(500, 'Yes!'));
                 const { status, json, next } = await call(httpError, { interceptor });
 
-                expect(interceptor).toHaveBeenCalledWith(httpError);
+                expect(interceptor).toHaveBeenCalledWith(httpError, req);
                 expect(status).toHaveBeenCalledWith(500);
                 expect(json).toHaveBeenCalledWith({ error: 'Yes!', info: {} });
                 expect(next).not.toHaveBeenCalled();
@@ -166,7 +168,7 @@ describe(HttpError, () => {
             const next = jest.fn();
             const res = { status, json };
             res.status.mockReturnValue(res);
-            await handler(error, {} as any, res as any, next);
+            await handler(error, req, res as any, next);
             return { status, json, next };
         }
     });

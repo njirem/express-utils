@@ -3,10 +3,15 @@ import { HttpError } from '../HttpError';
 
 export class MockServer<Body extends {
     put?: {};
+    putResponse?: {};
     patch?: {};
+    patchResponse?: {};
     post?: {};
+    postResponse?: {};
     delete?: {};
+    deleteResponse?: {};
     get?: {};
+    getResponse?: {};
 }> {
     static globalDefaults: MockServer.Options = {
         url: '/',
@@ -67,23 +72,23 @@ export class MockServer<Body extends {
         return req as unknown as import('express').Request;
     }
 
-    async post<R = {}, T = Body['post']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
+    async post<R = Body['postResponse'], T = Body['post']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
         return this.request<R>({ ...options, method: 'POST' });
     }
 
-    async put<R = {}, T = Body['put']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
+    async put<R = Body['putResponse'], T = Body['put']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
         return this.request<R>({ ...options, method: 'PUT' });
     }
 
-    async patch<R = {}, T = Body['patch']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
+    async patch<R = Body['patchResponse'], T = Body['patch']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
         return this.request<R>({ ...options, method: 'PATCH' });
     }
 
-    async delete<R = {}, T = Body['delete']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
+    async delete<R = Body['deleteResponse'], T = Body['delete']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
         return this.request<R>({ ...options, method: 'DELETE' });
     }
 
-    async get<R = {}, T = Body['get']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'body'>) {
+    async get<R = Body['getResponse'], T = Body['get']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'body'>) {
         return this.request<R>({ ...options, method: 'GET' });
     }
 

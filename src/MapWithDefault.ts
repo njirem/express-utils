@@ -1,6 +1,6 @@
 
 export class MapWithDefault<K, V> {
-    private readonly map = new Map<K, V>();
+    readonly map = new Map<K, V>();
     constructor(private readonly factory: (key: K) => V) { }
 
     get(key: K) {

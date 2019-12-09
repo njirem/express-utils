@@ -8,7 +8,7 @@ export class HttpError extends Error {
      * Create an ErrorRequestHandler, to convert HttpErrors into responses in Express
      */
     static Handler({ interceptor, catchAllErrors }: HandlerOptions = {}): import('express').ErrorRequestHandler {
-        return async (err, _req, res, next) => {
+        return async (err, req, res, next) => {
             if (!(err instanceof HttpError)) {
                 if (catchAllErrors) {
                     err = HttpError.fromError(err);
@@ -17,7 +17,7 @@ export class HttpError extends Error {
                 }
             }
             try {
-                err = interceptor && await interceptor(err) || err;
+                err = interceptor && await interceptor(err, req) || err;
             } catch (e) {
                 // tslint:disable-next-line: no-console
                 console.error('Error while handling previous error', e);
@@ -61,7 +61,7 @@ export interface HandlerOptions {
      * An interceptor for al the errors, before they are converted into a response.
      * Can be used to log the error and/or return a new (e.g. redacted) error.
      */
-    interceptor?: (err: HttpError) => void | HttpError | Promise<HttpError | void>;
+    interceptor?: (err: HttpError, req: import('express').Request) => void | HttpError | Promise<HttpError | void>;
     /**
      * By default the handler will only catch `HttpError`s.
      * If this option is set to true, the handler will also catch regular errors as status 500 HttpErrors.
