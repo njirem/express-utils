@@ -16,5 +16,9 @@
         "stripInternal": true,
         "baseUrl": "src",
         "outDir": "dist"
-    }
+    },
+    "exclude": [
+        "test-utils.d.ts",
+        "dist"
+    ]
 }

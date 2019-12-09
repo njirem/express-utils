@@ -1,19 +1,6 @@
 import { EventEmitter } from 'events';
 import { HttpError } from '../HttpError';
 
-const globalDefaults: InternalOptions = {
-    userScopes: [],
-    url: '/',
-    method: 'GET',
-    assertCode: 200,
-    errorHandlers: [HttpError.Handler({ catchAllErrors: true })],
-};
-
-export interface ExistingResourceResponseBody { ID: string; }
-export interface VersionedResourceResponseBody extends ExistingResourceResponseBody {
-    VERSIE: string;
-}
-
 export class MockServer<Body extends {
     put?: {};
     patch?: {};
@@ -21,13 +8,19 @@ export class MockServer<Body extends {
     delete?: {};
     get?: {};
 }> {
-    private defaults: InternalOptions;
-    constructor(private readonly router: import('express').Router, defaults?: Options) {
-        this.defaults = { ...globalDefaults, ...defaults };
+    static globalDefaults: MockServer.Options = {
+        url: '/',
+        method: 'GET',
+        assertCode: 200,
+        errorHandlers: [HttpError.Handler({ catchAllErrors: true })],
+    };
+    private defaults: MockServer.Options;
+    constructor(private readonly router: import('express').Router, defaults?: Partial<MockServer.Options>) {
+        this.defaults = { ...MockServer.globalDefaults, ...defaults };
     }
 
-    setDefaults(newDefaults: Options) {
-        let oldDefaults: InternalOptions;
+    setDefaults(newDefaults: Partial<MockServer.Options>) {
+        let oldDefaults: MockServer.Options;
         beforeAll(() => {
             oldDefaults = this.defaults;
             this.defaults = this.mergeOptions(newDefaults);
@@ -37,11 +30,11 @@ export class MockServer<Body extends {
         });
     }
 
-    mergeOptions<T>(options?: Options<T>): InternalOptions<T> {
-        return { ...this.defaults as InternalOptions<T>, ...options };
+    mergeOptions<T>(options?: Partial<MockServer.Options<T>>): MockServer.Options<T> {
+        return { ...this.defaults as MockServer.Options<T>, ...options };
     }
 
-    async request<T>(options?: Options) {
+    async request<T>(options?: Partial<MockServer.Options>) {
         const mergedOptions = this.mergeOptions(options);
 
         const req = this.createRequest(mergedOptions);
@@ -65,32 +58,32 @@ export class MockServer<Body extends {
         }
     }
 
-    private createRequest(options: InternalOptions) {
+    private createRequest(options: MockServer.Options) {
         const { url, method } = options;
         const body = decode(options.body);
         const query = decode(options.query);
         let req = { url, method, body, query };
-        if (options.requestInterceptor) { req = options.requestInterceptor(req) || req; }
+        if (options.requestInterceptor) { req = options.requestInterceptor(req, options) || req; }
         return req as unknown as import('express').Request;
     }
 
-    async post<R = VersionedResourceResponseBody, T = Body['post']>(options?: Omit<Options<T>, 'method' | 'query'>) {
+    async post<R = {}, T = Body['post']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
         return this.request<R>({ ...options, method: 'POST' });
     }
 
-    async put<R = VersionedResourceResponseBody, T = Body['put']>(options?: Omit<Options<T>, 'method' | 'query'>) {
+    async put<R = {}, T = Body['put']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
         return this.request<R>({ ...options, method: 'PUT' });
     }
 
-    async patch<R = VersionedResourceResponseBody, T = Body['patch']>(options?: Omit<Options<T>, 'method' | 'query'>) {
+    async patch<R = {}, T = Body['patch']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
         return this.request<R>({ ...options, method: 'PATCH' });
     }
 
-    async delete<R = ExistingResourceResponseBody, T = Body['delete']>(options?: Omit<Options<T>, 'method' | 'query'>) {
+    async delete<R = {}, T = Body['delete']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
         return this.request<R>({ ...options, method: 'DELETE' });
     }
 
-    async get<R = ExistingResourceResponseBody, T = Body['get']>(options?: Omit<Options<T>, 'method' | 'body'>) {
+    async get<R = {}, T = Body['get']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'body'>) {
         return this.request<R>({ ...options, method: 'GET' });
     }
 
@@ -146,18 +139,20 @@ class Response<T> extends EventEmitter {
 }
 
 type Method = 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'GET';
-interface InternalOptions<T = {}> {
-    userScopes: string[];
-    url: string;
-    method: Method;
-    body?: T | (() => T);
-    query?: T | (() => T);
-    assertCode: number;
-    requestInterceptor?(req: { url: string; method: Method; body: any; query: string; }): any;
-    errorHandlers: Array<import('express').ErrorRequestHandler>;
-}
 
-export type Options<T = {}> = Partial<InternalOptions<T>>;
+declare global {
+    namespace MockServer {
+        interface Options<T = {}> {
+            url: string;
+            method: Method;
+            body?: T | (() => T);
+            query?: T | (() => T);
+            assertCode: number;
+            requestInterceptor?(req: { url: string; method: Method; body: any; query: string; }, options: Options): any;
+            errorHandlers: Array<import('express').ErrorRequestHandler>;
+        }
+    }
+}
 
 export function decode(objOrFactory?: {} | (() => {})) {
     return (typeof objOrFactory === 'function' ? objOrFactory() : objOrFactory) || {};
