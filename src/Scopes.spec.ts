@@ -1,81 +1,70 @@
-import { Scopes } from './Scopes';
+import { assertUserHasScopes } from './scopes';
 
-describe(Scopes, () => {
+describe(assertUserHasScopes, () => {
     const res = {} as unknown as import('express').Response;
     const next = jest.fn();
     function req(scopes?: string[]) {
         return { authInfo: { scopes } } as unknown as import('express').Request;
     }
 
-    it('should be able to create a checker', () => {
-        const s = new Scopes;
-        expect(s).toBeTruthy();
-        expect(s.assertRequired).toEqual(expect.any(Function));
-    });
+    describe('without a mapper', () => {
+        it('should not handle a request without scopes', () => {
+            expect(() => assertUserHasScopes()(req(), res, next))
+                .toThrow('Did not receive enough authorization information to determine access rights.');
 
-    describe('with no pre-/postfix', () => {
-        const scopes = new Scopes();
-
-        it('should throw an error if no scope information is present', () => {
-            expect(() => scopes.assertRequired('myScope')(req(), res, next))
-                .toThrow(
-                    expect.objectContaining({
-                        code: 401,
-                        message: 'Did not receive enough authorization information to determine access rights.',
-                    }),
-                );
+            expect(() => assertUserHasScopes('foo')(req(), res, next))
+                .toThrow('Did not receive enough authorization information to determine access rights.');
         });
 
-        it('should return an HttpError if the requested scope is not present in the request', () => {
-            expect(() => scopes.assertRequired('myScope')(req([]), res, next))
-                .toThrow(
-                    expect.objectContaining({
-                        code: 403,
-                        message: 'Missing scope: myScope',
-                    }),
-                );
-        });
-
-        it('should return an HttpError if multiple scopes are not present in the request', () => {
-            expect(() => scopes.assertRequired('myScope', 'otherScope', 'presentScope')(req(['presentScope']), res, next))
-                .toThrow(
-                    expect.objectContaining({
-                        code: 403,
-                        message: 'Missing scopes: myScope, otherScope',
-                    }),
-                );
-        });
-
-        it('should call next if all scopes are found', () => {
-            scopes.assertRequired('myScope', 'presentScope')(req(['myScope', 'presentScope']), res, next);
-            expect(next).toHaveBeenCalled();
-        });
-    });
-
-    describe('with prefix/postfix', () => {
-        const scopes = new Scopes('prefix.', '.postfix');
-
-        it('should accept the given scope with prefix and postfix', () => {
-            scopes.assertRequired('myScope')(req(['prefix.myScope.postfix']), res, next);
+        it('should check for a single required scope', () => {
+            assertUserHasScopes('foo')(req(['foo']), res, next);
             expect(next).toHaveBeenCalled();
 
-            expect(() => scopes.assertRequired('myScope', 'presentScope')(req(['prefix.myScope.postfix']), res, next))
-                .toThrow(
-                    expect.objectContaining({
-                        code: 403,
-                        message: 'Missing scope: presentScope',
-                    })
-                );
+            expect(() => assertUserHasScopes('foo')(req([]), res, next))
+                .toThrow('Missing scope: foo');
         });
 
-        it('should not accept a scope without the prefix or postfix', () => {
-            expect(() => scopes.assertRequired('myScope')(req(['myScope']), res, next))
-                .toThrow(
-                    expect.objectContaining({
-                        code: 403,
-                        message: 'Missing scope: myScope',
-                    }),
-                );
+        it('should check for multiple required scopes', () => {
+            assertUserHasScopes('foo', 'bar')(req(['foo', 'bar']), res, next);
+            expect(next).toHaveBeenCalled();
+
+            expect(() => assertUserHasScopes('foo', 'bar')(req(['foo']), res, next))
+                .toThrow('Missing scope: bar');
+
+            expect(() => assertUserHasScopes('foo', 'bar')(req([]), res, next))
+                .toThrow('Missing scopes: foo, bar');
         });
     });
+
+    describe('with a mapper', () => {
+        const checkScopes = assertUserHasScopes.bind(null, s => `${s}.${s}`);
+
+        it('should be able to handle a request without scopes', () => {
+            expect(() => checkScopes()(req(), res, next))
+                .toThrow('Did not receive enough authorization information to determine access rights.');
+
+            expect(() => checkScopes('foo')(req(), res, next))
+                .toThrow('Did not receive enough authorization information to determine access rights.');
+        });
+
+        it('should check for a single required scope', () => {
+            checkScopes('foo')(req(['foo.foo']), res, next);
+            expect(next).toHaveBeenCalled();
+
+            expect(() => checkScopes('foo')(req([]), res, next))
+                .toThrow('Missing scope: foo');
+        });
+
+        it('should check for multiple required scopes', () => {
+            checkScopes('foo', 'bar')(req(['foo.foo', 'bar.bar']), res, next);
+            expect(next).toHaveBeenCalled();
+
+            expect(() => checkScopes('foo', 'bar')(req(['foo.foo']), res, next))
+                .toThrow('Missing scope: bar');
+
+            expect(() => checkScopes('foo', 'bar')(req([]), res, next))
+                .toThrow('Missing scopes: foo, bar');
+        });
+    });
+
 });
