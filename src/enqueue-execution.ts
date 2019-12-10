@@ -2,7 +2,7 @@ import { MapWithDefault } from './MapWithDefault';
 
 /** If the groupPicker returns this Symbol, the function/middleware will be executed directly, despite any queue */
 export const HANDLE_DIRECTLY: unique symbol = Symbol('handle directly');
-
+type Primitive = string | number | void | null | boolean | symbol;
 /**
  * Function wrapper, that makes sure the function can't run twice at the same time.
  * Can be given an groupPicker function to group executions by that argument (on === equality).
@@ -13,23 +13,28 @@ export const HANDLE_DIRECTLY: unique symbol = Symbol('handle directly');
  * @param {(...args: T) => K | typeof HANDLE_DIRECTLY} [groupPicker] - Optional function that can return a key to group execution on
  * @param {MapWithDefault<K, Promise<void>>} [activeExecutionsCache] - Optional cache map, on which the executions are cached.
  */
-export function enqueueExecution<Fn extends (this: any, ...args: any[]) => Promise<any>, K>(
+export function enqueueExecution<Fn extends (this: any, ...args: any[]) => Promise<any>, K extends Primitive>(
     fn: Fn,
-    groupPicker: (this: ThisParameterType<Fn>, ...args: Parameters<Fn>) => K | typeof HANDLE_DIRECTLY = () => undefined as any,
+    groupPicker: (this: ThisParameterType<Fn>, ...args: Parameters<Fn>) => K | K[] | typeof HANDLE_DIRECTLY = () => undefined as any,
     activeExecutionsCache = createActiveExecutionsQueue<K>(),
 ) {
     return async function (...args: Parameters<Fn>) {
-        const key = groupPicker.apply(this, args);
+        const group = groupPicker.apply(this, args);
         // Bypass option
-        if (key === HANDLE_DIRECTLY) { return fn.apply(this, args); }
+        if (group === HANDLE_DIRECTLY) { return fn.apply(this, args); }
 
-        const res = activeExecutionsCache.get(key).then(() => fn.apply(this, args));
+        const keys = Array.isArray(group) ? group : [group];
+        const res = Promise.all(keys.map(key => activeExecutionsCache.get(key))).then(() => fn.apply(this, args));
         const prom = res.catch(() => { }).then(() => {
-            if (activeExecutionsCache.get(key) === prom) {
-                activeExecutionsCache.delete(key);
+            for (const key of keys) {
+                if (activeExecutionsCache.get(key) === prom) {
+                    activeExecutionsCache.delete(key);
+                }
             }
         });
-        activeExecutionsCache.set(key, prom);
+        for (const key of keys) {
+            activeExecutionsCache.set(key, prom);
+        }
         return res;
     } as Fn;
 }
@@ -45,8 +50,8 @@ export function enqueueExecution<Fn extends (this: any, ...args: any[]) => Promi
  * @param {(req: import('express').Request) => K | typeof HANDLE_DIRECTLY} [groupBy]
  * @param {MapWithDefault<K, Promise<void>>} [activeExecutionsCache] - Optional cache map, on which the executions are cached.\
  */
-export function handleSequentially<K>(
-    groupBy?: (req: import('express').Request) => K | typeof HANDLE_DIRECTLY,
+export function handleSequentially<K extends Primitive>(
+    groupBy?: (req: import('express').Request) => K | K[] | typeof HANDLE_DIRECTLY,
     activeExecutionsCache?: ExecutionQueue<K>
 ): import('express').Handler {
     return enqueueExecution(async (_req, res, start) => {

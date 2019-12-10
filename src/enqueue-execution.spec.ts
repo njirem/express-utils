@@ -8,7 +8,7 @@ describe(enqueueExecution, () => {
     beforeEach(() => cb = jest.fn());
     async function callable(group: number, id: number) {
         cb(`start-${group}-${id}`);
-        await Promise.resolve();
+        await new Promise(r => setTimeout(r, 1));
         if (id > 1_000_000) {
             cb(`throw-${group}-${id}`);
             throw new Error('Nope!');
@@ -81,8 +81,8 @@ describe(enqueueExecution, () => {
                     ['start-42-1'],
                     ['start-69-3'],
                     ['done--42-1'],
-                    ['done--69-3'],
                     ['start-42-2'],
+                    ['done--69-3'],
                     ['done--42-2'],
                 ]);
             });
@@ -122,10 +122,74 @@ describe(enqueueExecution, () => {
             ['start-42-1'],
             ['start-42-2'],
             ['done--42-1'],
-            ['done--42-2'],
             ['start-69-1'],
+            ['done--42-2'],
             ['done--69-1'],
         ]);
+    });
+
+    describe('group by multiple properties', () => {
+        const enqueued = enqueueExecution(callable, (group, id) => ([group, id]));
+
+        it('should be able to group by multiple properties', async () => {
+            await Promise.all([
+                enqueued(42, 1),
+                enqueued(42, 2),
+                enqueued(69, 2),
+            ]);
+
+            expect(cb.mock.calls).toEqual([
+                ['start-42-1'],
+                ['done--42-1'],
+                ['start-42-2'],
+                ['done--42-2'],
+                ['start-69-2'],
+                ['done--69-2'],
+            ]);
+        });
+
+        it('should wait for all of the given properties', async () => {
+            await Promise.all([
+                enqueued(42, 1),
+                enqueued(42, 2),
+                enqueued(42, 3),
+                enqueued(69, 3),
+                enqueued(70, 3),
+                enqueued(71, 3),
+            ]);
+
+            expect(cb.mock.calls).toEqual([
+                ['start-42-1'],
+                ['done--42-1'],
+                ['start-42-2'],
+                ['done--42-2'],
+                ['start-42-3'],
+                ['done--42-3'],
+                ['start-69-3'],
+                ['done--69-3'],
+                ['start-70-3'],
+                ['done--70-3'],
+                ['start-71-3'],
+                ['done--71-3'],
+            ]);
+        });
+
+        it('should only wait for the given properties', async () => {
+            await Promise.all([
+                enqueued(42, 1),
+                enqueued(42, 2),
+                enqueued(69, 1),
+            ]);
+
+            expect(cb.mock.calls).toEqual([
+                ['start-42-1'],
+                ['done--42-1'],
+                ['start-42-2'],
+                ['start-69-1'],
+                ['done--42-2'],
+                ['done--69-1'],
+            ]);
+        });
     });
 });
 

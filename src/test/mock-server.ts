@@ -53,7 +53,7 @@ export class MockServer<Body extends {
         async function handleError(err: any, i = 0) {
             const handler = mergedOptions.errorHandlers[i];
             if (!handler) {
-                return res.fail(new Error('Error not handled by errorHandlers: ' + err && err.message || err));
+                return res.fail(new Error('Error not handled by errorHandlers: ' + err && err.message));
             }
             try {
                 await handler(err, req, res as any, error => handleError(error, i + 1));

@@ -7,6 +7,7 @@ describe(MockServer, () => {
     router.get('/', (_req, res) => res.status(200).json({ bar: true }));
     router.post('/', (req, res) => res.status(200).json({ receivedBody: req.body }));
     router.put('/throw', () => { throw new HttpError(409, 'Nope!', { some: 'info' }); });
+    router.put('/throwNonError', () => { throw new Error('Woopsie'); });
     router.patch('/throwAsync', async (_req, _res, next) => {
         await Promise.resolve();
         next(new HttpError(409, 'Nope!', { some: 'info' }));
@@ -92,6 +93,11 @@ describe(MockServer, () => {
             await expect(server.put({
                 errorHandlers: []
             })).rejects.toThrow('Nope!');
+
+            await expect(server.put({
+                url: '/throwNonError',
+                errorHandlers: []
+            })).rejects.toThrow('Woopsie');
 
             await expect(server.put({
                 errorHandlers: [err => { throw err; }]
