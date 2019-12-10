@@ -16,7 +16,7 @@ export const HANDLE_DIRECTLY: unique symbol = Symbol('handle directly');
 export function enqueueExecution<Fn extends (this: any, ...args: any[]) => Promise<any>, K>(
     fn: Fn,
     groupPicker: (this: ThisParameterType<Fn>, ...args: Parameters<Fn>) => K | typeof HANDLE_DIRECTLY = () => undefined as any,
-    activeExecutionsCache = createActiveExecutionsCache<K>(),
+    activeExecutionsCache = createActiveExecutionsQueue<K>(),
 ) {
     return async function (...args: Parameters<Fn>) {
         const key = groupPicker.apply(this, args);
@@ -46,7 +46,7 @@ export function enqueueExecution<Fn extends (this: any, ...args: any[]) => Promi
  * @param {MapWithDefault<K, Promise<void>>} [activeExecutionsCache] - Optional cache map, on which the executions are cached.\
  */
 export function handleSequentially<K>(
-    groupBy: (req: import('express').Request) => K | typeof HANDLE_DIRECTLY,
+    groupBy?: (req: import('express').Request) => K | typeof HANDLE_DIRECTLY,
     activeExecutionsCache?: ExecutionQueue<K>
 ): import('express').Handler {
     return enqueueExecution(async (_req, res, start) => {
@@ -56,7 +56,7 @@ export function handleSequentially<K>(
 }
 
 /** Creates a cache that can be used in `enqueueExecution` or `handleSequentially` to group multiple functions together */
-export function createActiveExecutionsCache<T>(): ExecutionQueue<T> {
+export function createActiveExecutionsQueue<T>(): ExecutionQueue<T> {
     return new MapWithDefault<T, Promise<void>>(() => Promise.resolve());
 }
 
