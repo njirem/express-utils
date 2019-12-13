@@ -4,6 +4,7 @@ const { oldNodeVersion } = require('./compatibility');
 module.exports = {
     clearMocks: true,
     restoreMocks: true,
+    roots: ['src'],
     collectCoverage: true,
     collectCoverageFrom: ['src/**'],
     coverageDirectory: 'coverage',

@@ -7,16 +7,22 @@ describe(enqueueExecution, () => {
     const queue = createActiveExecutionsQueue<number>();
     afterEach(() => expect(queue.map.size).toBe(0));
 
-    let cb: jest.Mock;
-    beforeEach(() => cb = jest.fn());
+    let called: string[][];
+    beforeEach(() => called = [[]]);
+    function lastCallGroup() { return called[called.length - 1]; }
+    function getCallGroups() { return called.filter(arr => arr.length); }
+
     async function callable(group: number, id: number) {
-        cb(`start-${group}-${id}`);
+        const current = lastCallGroup();
+        current.push(`${group}-${id}`);
         await new Promise(r => setTimeout(r, 1));
+        // If we are still at the current call group, create a new one, to be able to test the order of execution
+        if (current === lastCallGroup()) {
+            called.push([]);
+        }
         if (id > 1_000_000) {
-            cb(`throw-${group}-${id}`);
             throw new Error('Nope!');
         }
-        cb(`done--${group}-${id}`);
         return { group, id };
     }
 
@@ -28,10 +34,7 @@ describe(enqueueExecution, () => {
                 group: 0,
                 id: 1,
             });
-            expect(cb.mock.calls).toEqual([
-                ['start-0-1'],
-                ['done--0-1'],
-            ]);
+            expect(getCallGroups()).toEqual([['0-1']]);
         });
 
         it('should wait for the previous function', async () => {
@@ -41,13 +44,10 @@ describe(enqueueExecution, () => {
                 enqueued(42, 3),
             ]);
 
-            expect(cb.mock.calls).toEqual([
-                ['start-42-1'],
-                ['done--42-1'],
-                ['start-42-2'],
-                ['done--42-2'],
-                ['start-42-3'],
-                ['done--42-3'],
+            expect(getCallGroups()).toEqual([
+                ['42-1'],
+                ['42-2'],
+                ['42-3'],
             ]);
         });
 
@@ -61,14 +61,14 @@ describe(enqueueExecution, () => {
         });
 
         it('should continue when the function throws', async () => {
-            expect(enqueued(42, Infinity)).rejects.toThrow('Nope!');
-            await expect(enqueued(42, 100)).resolves.toEqual({ group: 42, id: 100 });
+            await Promise.all([
+                expect(enqueued(42, Infinity)).rejects.toThrow('Nope!'),
+                expect(enqueued(42, 100)).resolves.toEqual({ group: 42, id: 100 }),
+            ]);
 
-            expect(cb.mock.calls).toEqual([
-                ['start-42-Infinity'],
-                ['throw-42-Infinity'],
-                ['start-42-100'],
-                ['done--42-100'],
+            expect(getCallGroups()).toEqual([
+                ['42-Infinity'],
+                ['42-100'],
             ]);
         });
 
@@ -80,36 +80,26 @@ describe(enqueueExecution, () => {
                     enqueued(69, 3),
                 ]);
 
-                expect(cb.mock.calls).toEqual([
-                    ['start-42-1'],
-                    ['start-69-3'],
-                    ['done--42-1'],
-                    ['start-42-2'],
-                    ['done--69-3'],
-                    ['done--42-2'],
+                expect(getCallGroups()).toEqual([
+                    ['42-1', '69-3'],
+                    ['42-2'],
                 ]);
             });
         }
     });
 
     it('should be able to make sure any call is handled directly', async () => {
-        const enqueued = enqueueExecution(callable, (group, id) => id === 9 ? HANDLE_DIRECTLY : group, queue);
+        const enqueued = enqueueExecution(callable, (group, id) => id >= 8 ? HANDLE_DIRECTLY : group, queue);
         await Promise.all([
             enqueued(42, 1),
             enqueued(42, 2),
-            enqueued(42, 9),
+            enqueued(42, 8),
             enqueued(42, 9),
         ]);
 
-        expect(cb.mock.calls).toEqual([
-            ['start-42-9'],
-            ['start-42-9'],
-            ['start-42-1'],
-            ['done--42-9'],
-            ['done--42-9'],
-            ['done--42-1'],
-            ['start-42-2'],
-            ['done--42-2'],
+        expect(getCallGroups()).toEqual([
+            ['42-8', '42-9', '42-1'],
+            ['42-2'],
         ]);
     });
 
@@ -121,13 +111,9 @@ describe(enqueueExecution, () => {
             enqueued(42, 2),
         ]);
 
-        expect(cb.mock.calls).toEqual([
-            ['start-42-1'],
-            ['start-42-2'],
-            ['done--42-1'],
-            ['start-69-1'],
-            ['done--42-2'],
-            ['done--69-1'],
+        expect(getCallGroups()).toEqual([
+            ['42-1', '42-2'],
+            ['69-1'],
         ]);
     });
 
@@ -141,13 +127,10 @@ describe(enqueueExecution, () => {
                 enqueued(69, 2),
             ]);
 
-            expect(cb.mock.calls).toEqual([
-                ['start-42-1'],
-                ['done--42-1'],
-                ['start-42-2'],
-                ['done--42-2'],
-                ['start-69-2'],
-                ['done--69-2'],
+            expect(getCallGroups()).toEqual([
+                ['42-1'],
+                ['42-2'],
+                ['69-2'],
             ]);
         });
 
@@ -159,15 +142,11 @@ describe(enqueueExecution, () => {
                 enqueued(69, 2),
             ]);
 
-            expect(cb.mock.calls).toEqual([
-                ['start-42-1'],
-                ['done--42-1'],
-                ['start-42-Infinity'],
-                ['throw-42-Infinity'],
-                ['start-69-Infinity'],
-                ['throw-69-Infinity'],
-                ['start-69-2'],
-                ['done--69-2'],
+            expect(getCallGroups()).toEqual([
+                ['42-1'],
+                ['42-Infinity'],
+                ['69-Infinity'],
+                ['69-2'],
             ]);
 
         });
@@ -175,26 +154,17 @@ describe(enqueueExecution, () => {
         it('should wait for all of the given properties', async () => {
             await Promise.all([
                 enqueued(42, 1),
-                enqueued(42, 2),
-                enqueued(42, 3),
-                enqueued(69, 3),
-                enqueued(70, 3),
-                enqueued(71, 3),
+                enqueued(69, 1), enqueued(42, 2),
+                enqueued(69, 3), enqueued(70, 1), enqueued(42, 4), enqueued(43, 2),
+                enqueued(42, 1),
+                enqueued(100, 100),
             ]);
 
-            expect(cb.mock.calls).toEqual([
-                ['start-42-1'],
-                ['done--42-1'],
-                ['start-42-2'],
-                ['done--42-2'],
-                ['start-42-3'],
-                ['done--42-3'],
-                ['start-69-3'],
-                ['done--69-3'],
-                ['start-70-3'],
-                ['done--70-3'],
-                ['start-71-3'],
-                ['done--71-3'],
+            expect(getCallGroups()).toEqual([
+                ['42-1', '100-100'],
+                ['69-1', '42-2'],
+                ['69-3', '70-1', '42-4', '43-2'],
+                ['42-1'],
             ]);
         });
 
@@ -205,13 +175,9 @@ describe(enqueueExecution, () => {
                 enqueued(69, 1),
             ]);
 
-            expect(cb.mock.calls).toEqual([
-                ['start-42-1'],
-                ['done--42-1'],
-                ['start-42-2'],
-                ['start-69-1'],
-                ['done--42-2'],
-                ['done--69-1'],
+            expect(getCallGroups()).toEqual([
+                ['42-1'],
+                ['42-2', '69-1'],
             ]);
         });
     });
