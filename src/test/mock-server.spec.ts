@@ -57,6 +57,60 @@ describe(MockServer, () => {
         })).rejects.toThrow('Assert failed, expected request to have code: 200, got 409');
     });
 
+    describe('events', () => {
+        const myRouter = Router();
+        myRouter.get('/', () => { /**  */ });
+
+        const server = new MockServer(router, {
+            method: 'GET',
+        });
+
+        it(`should emit 'finish' when the request is done`, () => {
+            const finish = jest.fn();
+
+            const res = server.request();
+            res.once('finish', finish);
+            res.status(200).json({ foo: 'bar' });
+
+            expect(finish).toHaveBeenCalledTimes(1);
+        });
+
+        it(`should emit 'close' when the request is cancelled`, () => {
+            const close = jest.fn();
+
+            const res = server.request();
+            res.once('close', close);
+            res.cancelRequest();
+
+            expect(close).toHaveBeenCalledTimes(1);
+        });
+
+        it(`should not emit 'close' twice`, () => {
+            const close = jest.fn();
+
+            const res = server.request();
+            res.on('close', close);
+            res.cancelRequest();
+            res.cancelRequest();
+
+            expect(close).toHaveBeenCalledTimes(1);
+        });
+
+        it(`should not finish a cancelled request`, () => {
+            const close = jest.fn();
+            const finish = jest.fn();
+
+            const res = server.request();
+            res.on('close', close);
+            res.on('finish', finish);
+            res.cancelRequest();
+            res.status(200).json({ response: 'maybe' });
+
+            expect(close).toHaveBeenCalledTimes(1);
+            expect(finish).not.toHaveBeenCalled();
+        });
+    });
+
     describe('errorHandlers', () => {
         const server = new MockServer(router, {
             url: '/throw',

@@ -228,6 +228,32 @@ describe(handleSequentially, () => {
             await expect(p2).resolves.toEqual({ group: 1, id: 2 });
         });
 
+        it('should call the handlers even though one is cancelled', async () => {
+            const p0 = server.request();
+            const p1 = server.request();
+            const p2 = server.request();
+            const p3 = server.request();
+
+            // Wait for all the internal Promises to have been resolved
+            await milliseconds();
+
+            expect(handler).toHaveBeenCalledTimes(1);
+            p0.cancelRequest();
+            await milliseconds();
+
+            expect(handler).toHaveBeenCalledTimes(2);
+            p1.status(200).json({ response: 1 });
+            await milliseconds();
+            await expect(p1.waitForResult).resolves.toEqual({ response: 1 });
+
+            expect(handler).toHaveBeenCalledTimes(3);
+            p2.cancelRequest();
+            await milliseconds();
+
+            p3.status(200).json({ response: 2 });
+            await expect(p3.waitForResult).resolves.toEqual({ response: 2 });
+        });
+
         if (type === 'grouped') {
             it('should group requests together and only handle those sequentially', async () => {
                 const p0 = server.post({ body: { group: 1, id: 0 } });

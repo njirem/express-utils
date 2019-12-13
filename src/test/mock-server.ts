@@ -39,7 +39,7 @@ export class MockServer<Body extends {
         return { ...this.defaults as MockServer.Options<T>, ...options };
     }
 
-    async request<T>(options?: Partial<MockServer.Options>) {
+    request<T>(options?: Partial<MockServer.Options>) {
         const mergedOptions = this.mergeOptions(options);
 
         const req = this.createRequest(mergedOptions);
@@ -48,7 +48,7 @@ export class MockServer<Body extends {
             if (e === undefined) { return res.fail(new Error(`The route '${req.url}' was not handled by this Router`)); }
             await handleError(e);
         });
-        return await res.waitForResult;
+        return res;
 
         async function handleError(err: any, i = 0) {
             const handler = mergedOptions.errorHandlers[i];
@@ -73,23 +73,23 @@ export class MockServer<Body extends {
     }
 
     async post<R = Body['postResponse'], T = Body['post']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
-        return this.request<R>({ ...options, method: 'POST' });
+        return this.request<R>({ ...options, method: 'POST' }).waitForResult;
     }
 
     async put<R = Body['putResponse'], T = Body['put']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
-        return this.request<R>({ ...options, method: 'PUT' });
+        return this.request<R>({ ...options, method: 'PUT' }).waitForResult;
     }
 
     async patch<R = Body['patchResponse'], T = Body['patch']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
-        return this.request<R>({ ...options, method: 'PATCH' });
+        return this.request<R>({ ...options, method: 'PATCH' }).waitForResult;
     }
 
     async delete<R = Body['deleteResponse'], T = Body['delete']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'query'>) {
-        return this.request<R>({ ...options, method: 'DELETE' });
+        return this.request<R>({ ...options, method: 'DELETE' }).waitForResult;
     }
 
     async get<R = Body['getResponse'], T = Body['get']>(options?: Omit<Partial<MockServer.Options<T>>, 'method' | 'body'>) {
-        return this.request<R>({ ...options, method: 'GET' });
+        return this.request<R>({ ...options, method: 'GET' }).waitForResult;
     }
 
 }
@@ -106,11 +106,14 @@ class Response<T> extends EventEmitter {
     waitForResult = new Promise<T>((res, rej) => { this._done = res; this.fail = rej; });
     private _done!: (res: T) => void;
     fail!: (e: Error) => void;
+    private _cancelled = false;
     private _response: Partial<{
         code: number;
         body: T;
     }> = {};
     private _maybeDone() {
+        if (this._cancelled) { return; }
+
         const { body, code } = this._response;
         // tslint:disable-next-line: triple-equals
         if (body !== undefined && code != undefined) {
@@ -122,9 +125,16 @@ class Response<T> extends EventEmitter {
                 }
                 return this._done(body);
             } finally {
-                this.emit('close');
+                this.emit('finish');
             }
         }
+    }
+
+    /** Mock a client side cancelled request */
+    cancelRequest() {
+        if (this._cancelled) { return; }
+        this._cancelled = true;
+        this.emit('close');
     }
 
     status(code: number) {

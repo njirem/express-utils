@@ -57,7 +57,10 @@ export function handleSequentially<K extends Primitive>(
 ): import('express').Handler {
     return enqueueExecution(async (_req, res, start) => {
         start();
-        return new Promise(r => res.once('close', r));
+        return new Promise(r => {
+            res.once('finish', r);
+            res.once('close', r);
+        });
     }, groupBy, activeExecutionsCache);
 }
 
