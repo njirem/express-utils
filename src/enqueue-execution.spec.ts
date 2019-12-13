@@ -1,9 +1,12 @@
 import { Router } from 'express';
-import { enqueueExecution, HANDLE_DIRECTLY, handleSequentially } from './enqueue-execution';
+import { createActiveExecutionsQueue, enqueueExecution, HANDLE_DIRECTLY, handleSequentially } from './enqueue-execution';
 import { MapWithDefault } from './MapWithDefault';
 import { MockServer } from './test';
 
 describe(enqueueExecution, () => {
+    const queue = createActiveExecutionsQueue<number>();
+    afterEach(() => expect(queue.map.size).toBe(0));
+
     let cb: jest.Mock;
     beforeEach(() => cb = jest.fn());
     async function callable(group: number, id: number) {
@@ -18,7 +21,7 @@ describe(enqueueExecution, () => {
     }
 
     describe.each([true, false])('with `grouped`: %s', grouped => {
-        const enqueued = enqueueExecution(callable, grouped ? group => group : undefined);
+        const enqueued = enqueueExecution(callable, grouped ? group => group : undefined, queue);
 
         it('should execute the given function and return the result', async () => {
             await expect(enqueued(0, 1)).resolves.toEqual({
@@ -90,7 +93,7 @@ describe(enqueueExecution, () => {
     });
 
     it('should be able to make sure any call is handled directly', async () => {
-        const enqueued = enqueueExecution(callable, (group, id) => id === 9 ? HANDLE_DIRECTLY : group);
+        const enqueued = enqueueExecution(callable, (group, id) => id === 9 ? HANDLE_DIRECTLY : group, queue);
         await Promise.all([
             enqueued(42, 1),
             enqueued(42, 2),
@@ -111,7 +114,7 @@ describe(enqueueExecution, () => {
     });
 
     it('should be able to group by another property', async () => {
-        const enqueued = enqueueExecution(callable, (_group, id) => id);
+        const enqueued = enqueueExecution(callable, (_group, id) => id, queue);
         await Promise.all([
             enqueued(42, 1),
             enqueued(69, 1),
@@ -129,7 +132,7 @@ describe(enqueueExecution, () => {
     });
 
     describe('group by multiple properties', () => {
-        const enqueued = enqueueExecution(callable, (group, id) => ([group, id]));
+        const enqueued = enqueueExecution(callable, (group, id) => ([group, id]), queue);
 
         it('should be able to group by multiple properties', async () => {
             await Promise.all([
@@ -146,6 +149,27 @@ describe(enqueueExecution, () => {
                 ['start-69-2'],
                 ['done--69-2'],
             ]);
+        });
+
+        it('should not matter if any of the executions throws an error', async () => {
+            await Promise.all([
+                enqueued(42, 1),
+                expect(enqueued(42, Infinity)).rejects.toThrow(),
+                expect(enqueued(69, Infinity)).rejects.toThrow(),
+                enqueued(69, 2),
+            ]);
+
+            expect(cb.mock.calls).toEqual([
+                ['start-42-1'],
+                ['done--42-1'],
+                ['start-42-Infinity'],
+                ['throw-42-Infinity'],
+                ['start-69-Infinity'],
+                ['throw-69-Infinity'],
+                ['start-69-2'],
+                ['done--69-2'],
+            ]);
+
         });
 
         it('should wait for all of the given properties', async () => {
