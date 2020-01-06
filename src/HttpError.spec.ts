@@ -90,6 +90,17 @@ describe(HttpError, () => {
                 expect(json).toHaveBeenCalledWith({ error: 'Foo', info: { cause: err } });
                 expect(next).not.toHaveBeenCalled();
             });
+
+            test.each(['statusCode', 'code', 'errorCode'])('should try to extract an error code from %s', async prop => {
+                const err = new Error('Foo') as any;
+                err[prop] = 418;
+
+                const { status, json, next } = await call(err, { catchAllErrors: true });
+
+                expect(status).toHaveBeenCalledWith(418);
+                expect(json).toHaveBeenCalledWith({ error: 'Foo', info: { cause: err } });
+                expect(next).not.toHaveBeenCalled();
+            });
         });
 
         describe('interceptor', () => {

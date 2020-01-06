@@ -38,7 +38,7 @@ export class HttpError extends Error {
      */
     static fromError(cause: Error, code?: number, info?: {}): HttpError;
     static fromError(cause: Error, code: number, description: string, info?: {}): HttpError;
-    static fromError(cause: Error, code = 500, descriptionOrInfo?: string | {}, info?: {}) {
+    static fromError(cause: Error, code = getStatusCode(cause), descriptionOrInfo?: string | {}, info?: {}) {
         if (typeof descriptionOrInfo === 'string') {
             return new HttpError(code, descriptionOrInfo, { ...info, cause });
         }
@@ -67,4 +67,11 @@ export interface HandlerOptions {
      * If this option is set to true, the handler will also catch regular errors as status 500 HttpErrors.
      */
     catchAllErrors?: boolean;
+}
+
+function getStatusCode(cause: any) {
+    if (typeof cause.statusCode === 'number') { return cause.statusCode; }
+    if (typeof cause.code === 'number') { return cause.code; }
+    if (typeof cause.errorCode === 'number') { return cause.errorCode; }
+    return 500;
 }
