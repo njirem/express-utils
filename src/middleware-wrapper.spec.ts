@@ -1,3 +1,5 @@
+import { EventEmitter } from 'events';
+import { PassThrough } from 'stream';
 import { HttpError } from './HttpError';
 import { sendWs, wrapMiddleware, wrapWsMiddleware } from './middleware-wrapper';
 
@@ -8,11 +10,11 @@ describe(wrapMiddleware, () => {
     const req = {} as any;
     let res: any;
     beforeEach(() => {
-        res = {
-            finished: false,
-            status: jest.fn(),
-            json: jest.fn(),
-        };
+        res = new EventEmitter();
+        res.finished = false;
+        res.status = jest.fn();
+        res.json = jest.fn();
+        res.pipe = jest.fn().mockImplementation(() => res.emit('pipe'));
         res.status.mockReturnValue(res);
     });
 
@@ -29,6 +31,22 @@ describe(wrapMiddleware, () => {
         expect(res.json).toHaveBeenCalledWith(retVal);
     });
 
+    it('should pipe a returned readable stream', async () => {
+        const stream = new PassThrough;
+        jest.spyOn(stream, 'pipe');
+        handler.mockReturnValueOnce(stream);
+        await wrappedHandler(req, res, next);
+        expect(stream.pipe).toHaveBeenCalledWith(res);
+    });
+
+    it('should not send anything if the returned value is not a readable stream or a plain object', async () => {
+        class Foo { result = 'some result value'; }
+        handler.mockResolvedValueOnce(new Foo);
+        await wrappedHandler(req, res, next);
+        expect(res.status).not.toHaveBeenCalled();
+        expect(res.json).not.toHaveBeenCalled();
+    });
+
     it('should not send anything if nothing is returned', async () => {
         handler.mockResolvedValueOnce(undefined);
         await wrappedHandler(req, res, next);
@@ -40,6 +58,17 @@ describe(wrapMiddleware, () => {
         res.finished = true;
         const retVal = { result: 'some result value' };
         handler.mockResolvedValueOnce(retVal);
+        await wrappedHandler(req, res, next);
+        expect(res.status).not.toHaveBeenCalled();
+        expect(res.json).not.toHaveBeenCalled();
+    });
+
+    it('should not send anything if the response has already been piped to', async () => {
+        const retVal = { result: 'some result value' };
+        handler.mockImplementationOnce(() => {
+            res.pipe('some stream');
+            return retVal;
+        });
         await wrappedHandler(req, res, next);
         expect(res.status).not.toHaveBeenCalled();
         expect(res.json).not.toHaveBeenCalled();

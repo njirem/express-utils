@@ -35,6 +35,7 @@
         "@types/express-ws": "^3.0.0",
         "@types/passport": "^1.0.2",
         "@types/ws": "^6.0.4",
+        "is-stream": "^2.0.0",
         "tslib": "^1.10.0"
     },
     "devDependencies": {

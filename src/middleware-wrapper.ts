@@ -1,3 +1,4 @@
+import { readable } from 'is-stream';
 import { promisify } from 'util';
 import { HttpError } from './HttpError';
 
@@ -11,9 +12,23 @@ import { HttpError } from './HttpError';
 export function wrapMiddleware(handler: import('express').Handler, ignoreReturnValue = false): import('express').Handler {
     return async (req, res, next) => {
         try {
+            // If 'pipe' has been called, ignore the return value, it is already being written
+            let startedPipe = false;
+            res.once('pipe', () => startedPipe = true);
+
+            // Call the given handler
             const retVal = await handler.call(undefined, req, res, next);
-            if (!ignoreReturnValue && retVal != null && typeof retVal === 'object' && !res.finished) {
-                res.status(200).json(retVal);
+
+            // Test if we need to send the return value
+            if (!ignoreReturnValue && !startedPipe && retVal != null && typeof retVal === 'object' && !res.finished) {
+                // Nothing has been sent yet (as far as we can tell)
+                if (readable(retVal)) {
+                    // A readable stream was returned
+                    retVal.pipe(res);
+                } else if (Object.getPrototypeOf(retVal) === Object.prototype) {
+                    // Only send it as json if it is a 'plain' object
+                    res.status(200).json(retVal);
+                }
             }
         } catch (e) {
             next(e);
