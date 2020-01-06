@@ -1,4 +1,3 @@
-import { EventEmitter } from 'events';
 import { PassThrough } from 'stream';
 import { HttpError } from './HttpError';
 import { sendWs, wrapMiddleware, wrapWsMiddleware } from './middleware-wrapper';
@@ -10,11 +9,10 @@ describe(wrapMiddleware, () => {
     const req = {} as any;
     let res: any;
     beforeEach(() => {
-        res = new EventEmitter();
+        res = new PassThrough();
         res.finished = false;
         res.status = jest.fn();
         res.json = jest.fn();
-        res.pipe = jest.fn().mockImplementation(() => res.emit('pipe'));
         res.status.mockReturnValue(res);
     });
 
@@ -34,9 +32,10 @@ describe(wrapMiddleware, () => {
     it('should pipe a returned readable stream', async () => {
         const stream = new PassThrough;
         jest.spyOn(stream, 'pipe');
+        res.once('pipe', () => stream.end());
         handler.mockReturnValueOnce(stream);
         await wrappedHandler(req, res, next);
-        expect(stream.pipe).toHaveBeenCalledWith(res);
+        expect(stream.pipe).toHaveBeenCalled();
     });
 
     it('should not send anything if the returned value is not a readable stream or a plain object', async () => {
