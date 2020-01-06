@@ -1,6 +1,9 @@
 import { readable } from 'is-stream';
+import { pipeline as cbPipeline } from 'stream';
 import { promisify } from 'util';
 import { HttpError } from './HttpError';
+
+const pipeline = promisify(cbPipeline);
 
 /**
  * Wraps a middleware handler, so that async errors (returned rejected Promises) will be caught and handled by Express.
@@ -24,7 +27,10 @@ export function wrapMiddleware(handler: import('express').Handler, ignoreReturnV
                 // Nothing has been sent yet (as far as we can tell)
                 if (readable(retVal)) {
                     // A readable stream was returned
-                    retVal.pipe(res);
+                    await pipeline(
+                        retVal,
+                        res,
+                    );
                 } else if (Object.getPrototypeOf(retVal) === Object.prototype) {
                     // Only send it as json if it is a 'plain' object
                     res.status(200).json(retVal);
