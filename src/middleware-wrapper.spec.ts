@@ -13,6 +13,8 @@ describe(wrapMiddleware, () => {
         res.finished = false;
         res.status = jest.fn();
         res.json = jest.fn();
+        res.hasHeader = jest.fn().mockReturnValue(false);
+        res.set = jest.fn();
         res.status.mockReturnValue(res);
     });
 
@@ -32,11 +34,34 @@ describe(wrapMiddleware, () => {
     describe('streaming', () => {
         it('should pipe a returned readable stream', async () => {
             const stream = new PassThrough;
+            const dataSpy = jest.fn();
+            res.on('data', dataSpy);
             jest.spyOn(stream, 'pipe');
-            res.once('pipe', () => stream.end());
+            res.once('pipe', () => {
+                stream.write('something');
+                stream.end();
+            });
             handler.mockReturnValueOnce(stream);
             await wrappedHandler(req, res, next);
             expect(stream.pipe).toHaveBeenCalled();
+            expect(dataSpy).toHaveBeenCalledWith(Buffer.from('something'));
+        });
+
+        it('should optionally try to set the `Content-Type` header', async () => {
+            let stream = new PassThrough;
+            res.on('pipe', () => stream.end());
+            handler.mockReturnValueOnce(stream);
+            res.hasHeader.mockReturnValueOnce(true);
+            await wrappedHandler(req, res, next);
+            expect(res.hasHeader).toHaveBeenCalledTimes(1);
+            expect(res.set).not.toHaveBeenCalled();
+
+            stream = new PassThrough;
+            handler.mockReturnValueOnce(stream);
+            res.hasHeader.mockReturnValueOnce(false);
+            await wrappedHandler(req, res, next);
+            expect(res.hasHeader).toHaveBeenCalledTimes(2);
+            expect(res.set).toHaveBeenCalledWith('Content-Type', 'application/json');
         });
 
         it('should next an error in the stream to express error handlers', async () => {
