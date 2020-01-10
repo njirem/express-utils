@@ -42,6 +42,8 @@ describe(HttpError, () => {
         expect(HttpError.fromError(cause, 400, 'myMessage')).toEqual(expect.objectContaining({
             message: 'myMessage', code: 400, info: { cause }
         }));
+
+        expect(HttpError.fromError(cause)).toHaveProperty('stack', cause.stack);
     });
 
     it('should have shortcuts for different errors', () => {

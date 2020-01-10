@@ -42,10 +42,14 @@ export class HttpError extends Error {
     static fromError(cause: Error, code?: number, info?: {}): HttpError;
     static fromError(cause: Error, code: number, description: string, info?: {}): HttpError;
     static fromError(cause: Error, code = getStatusCode(cause), descriptionOrInfo?: string | {}, info?: {}) {
+        let error: HttpError;
         if (typeof descriptionOrInfo === 'string') {
-            return new HttpError(code, descriptionOrInfo, { ...info, cause });
+            error = new HttpError(code, descriptionOrInfo, { ...info, cause });
+        } else {
+            error = new HttpError(code, cause.message, { ...descriptionOrInfo, cause });
         }
-        return new HttpError(code, cause.message, { ...descriptionOrInfo, cause });
+        error.stack = cause.stack;
+        return error;
     }
 
     static BadRequest(description = 'Bad Request', info?: {}) { return new HttpError(400, description, info); }
