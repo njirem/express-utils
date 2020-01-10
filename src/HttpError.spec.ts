@@ -81,7 +81,7 @@ describe(HttpError, () => {
             const { status, json, next } = await call(new HttpError(418, 'Teapot', info));
 
             expect(status).toHaveBeenCalledWith(418);
-            expect(json).toHaveBeenCalledWith({ error: 'Teapot', info: { some: 'info', ref: '[Circular ~.info]' } });
+            expect(json).toHaveBeenCalledWith({ error: 'Teapot', info: { some: 'info', ref: '[Circular ~]' } });
             expect(next).not.toHaveBeenCalled();
         });
 
@@ -94,12 +94,21 @@ describe(HttpError, () => {
                 expect(json).not.toHaveBeenCalled();
                 expect(next).toHaveBeenCalledWith(err);
             });
+
             it('should be possible to handle other Errors as well', async () => {
                 const err = new Error('Foo');
                 const { status, json, next } = await call(err, { catchAllErrors: true });
 
                 expect(status).toHaveBeenCalledWith(500);
                 expect(json).toHaveBeenCalledWith({ error: 'Foo', info: { cause: { ...err } } });
+                expect(next).not.toHaveBeenCalled();
+            });
+
+            it('should send a thrown Plain Object as the body with a status 500', async () => {
+                const { status, json, next } = await call({ some: 'info' }, { catchAllErrors: true });
+
+                expect(status).toHaveBeenCalledWith(500);
+                expect(json).toHaveBeenCalledWith({ some: 'info' });
                 expect(next).not.toHaveBeenCalled();
             });
 
@@ -184,7 +193,7 @@ describe(HttpError, () => {
             });
         });
 
-        async function call(error: Error, handlerOptions?: HandlerOptions) {
+        async function call(error: Error | {}, handlerOptions?: HandlerOptions) {
             const handler = HttpError.Handler(handlerOptions);
             const status = jest.fn();
             const json = jest.fn();

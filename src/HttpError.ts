@@ -11,7 +11,11 @@ export class HttpError extends Error {
         return async (err, req, res, next) => {
             if (!(err instanceof HttpError)) {
                 if (catchAllErrors) {
-                    err = HttpError.fromError(err);
+                    if (err instanceof Error) {
+                        err = HttpError.fromError(err);
+                    } else {
+                        err = HttpError.returnBody(err);
+                    }
                 } else {
                     return next(err);
                 }
@@ -22,13 +26,7 @@ export class HttpError extends Error {
                 // tslint:disable-next-line: no-console
                 console.error('Error while handling previous error', e);
             }
-            res.status(err.code).json(
-                // Prevent circular references from throwing an error here...
-                JSON.parse(stringify({
-                    error: err.message,
-                    info: err.info,
-                }))
-            );
+            res.status(err.code).json(err.body);
         };
     }
 
@@ -52,15 +50,24 @@ export class HttpError extends Error {
         return error;
     }
 
+    static returnBody(body: {}, code = 500) {
+        return new HttpError(code, 'Server Error', body, true);
+    }
+
     static BadRequest(description = 'Bad Request', info?: {}) { return new HttpError(400, description, info); }
     static Forbidden(description = 'Forbidden', info?: {}) { return new HttpError(403, description, info); }
     static NotFound(description = 'Resource Not Found', info?: {}) { return new HttpError(404, description, info); }
     static Conflict(description = 'Conflict', info?: {}) { return new HttpError(409, description, info); }
     static ServerError(description = 'Internal Server Error', info?: {}) { return new HttpError(500, description, info); }
 
-    constructor(readonly code: number, description: string, readonly info: {} = {}) {
+    constructor(readonly code: number, description: string, readonly info: {} = {}, useInfoAsBody = false) {
         super(description);
+        // Prevent circular references from throwing an error...
+        info = JSON.parse(stringify(info));
+        this.body = useInfoAsBody ? info : { error: description, info };
     }
+
+    readonly body: {};
 }
 
 export interface HandlerOptions {
