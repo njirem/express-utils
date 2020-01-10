@@ -1,4 +1,4 @@
-
+import stringify from 'json-stringify-safe';
 /**
  * An error that can be thrown with a status code and additional information.
  * HttpError.Handler can be used as an Express error handler for these errors.
@@ -22,10 +22,13 @@ export class HttpError extends Error {
                 // tslint:disable-next-line: no-console
                 console.error('Error while handling previous error', e);
             }
-            res.status(err.code).json({
-                error: err.message,
-                info: err.info,
-            });
+            res.status(err.code).json(
+                // Prevent circular references from throwing an error here...
+                JSON.parse(stringify({
+                    error: err.message,
+                    info: err.info,
+                }))
+            );
         };
     }
 
@@ -51,7 +54,7 @@ export class HttpError extends Error {
     static Conflict(description = 'Conflict', info?: {}) { return new HttpError(409, description, info); }
     static ServerError(description = 'Internal Server Error', info?: {}) { return new HttpError(500, description, info); }
 
-    constructor(readonly code: number, description: string, readonly info: {} = {}, readonly originalError?: Error) {
+    constructor(readonly code: number, description: string, readonly info: {} = {}) {
         super(description);
     }
 }

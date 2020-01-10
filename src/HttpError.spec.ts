@@ -73,6 +73,16 @@ describe(HttpError, () => {
             expect(next).not.toHaveBeenCalled();
         });
 
+        it('should send the response with the given code, message and info', async () => {
+            const info = { some: 'info' } as any;
+            info.ref = info;
+            const { status, json, next } = await call(new HttpError(418, 'Teapot', info));
+
+            expect(status).toHaveBeenCalledWith(418);
+            expect(json).toHaveBeenCalledWith({ error: 'Teapot', info: { some: 'info', ref: '[Circular ~.info]' } });
+            expect(next).not.toHaveBeenCalled();
+        });
+
         describe('non HttpErrors', () => {
             it('should send other Errors to the next middleware', async () => {
                 const err = new Error('Foo');
@@ -87,7 +97,7 @@ describe(HttpError, () => {
                 const { status, json, next } = await call(err, { catchAllErrors: true });
 
                 expect(status).toHaveBeenCalledWith(500);
-                expect(json).toHaveBeenCalledWith({ error: 'Foo', info: { cause: err } });
+                expect(json).toHaveBeenCalledWith({ error: 'Foo', info: { cause: { ...err } } });
                 expect(next).not.toHaveBeenCalled();
             });
 
@@ -98,7 +108,7 @@ describe(HttpError, () => {
                 const { status, json, next } = await call(err, { catchAllErrors: true });
 
                 expect(status).toHaveBeenCalledWith(418);
-                expect(json).toHaveBeenCalledWith({ error: 'Foo', info: { cause: err } });
+                expect(json).toHaveBeenCalledWith({ error: 'Foo', info: { cause: { ...err } } });
                 expect(next).not.toHaveBeenCalled();
             });
         });
