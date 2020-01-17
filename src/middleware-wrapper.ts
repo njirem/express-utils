@@ -37,8 +37,8 @@ export function wrapMiddleware(handler: import('express').Handler, ignoreReturnV
                     retVal.once('error', error => next(error));
                     // Pipe the stream to the response
                     retVal.pipe(new PipeThrough).pipe(res);
-                } else if (Object.getPrototypeOf(retVal) === Object.prototype) {
-                    // Only send it as json if it is a 'plain' object
+                } else if (Object.getPrototypeOf(retVal) === Object.prototype || Array.isArray(retVal)) {
+                    // Only send it as json if it is a 'plain' object or Array
                     res.status(200).json(retVal);
                 }
             }

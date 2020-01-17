@@ -29,6 +29,13 @@ describe(wrapMiddleware, () => {
         await wrappedHandler(req, res, next);
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith(retVal);
+
+        const retArr = [{ result: 'some result value' }, { and: 'another one' }];
+        handler.mockResolvedValueOnce(retArr);
+        await wrappedHandler(req, res, next);
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(retArr);
+
     });
 
     describe('streaming', () => {
