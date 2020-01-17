@@ -120,7 +120,7 @@ describe(wrapMiddleware, () => {
     it('should call next if the handler returns a rejected promise', async () => {
         const error = 'any error';
         handler.mockReturnValueOnce(Promise.reject(error));
-        await wrappedHandler(req, res, next).catch(() => { });
+        await wrappedHandler(req, res, next);
         expect(next).toHaveBeenCalledWith(error);
     });
 

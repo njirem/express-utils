@@ -25,7 +25,7 @@ export function enqueueExecution<Fn extends (this: any, ...args: any[]) => Promi
 
         const keys = Array.isArray(group) ? group : [group];
         const res = Promise.all(keys.map(key => activeExecutionsCache.get(key))).then(() => fn.apply(this, args));
-        const prom = res.catch(() => { }).then(() => {
+        const prom = res.catch(() => { /** Catch any errors */ }).then(() => {
             for (const key of keys) {
                 // Get the key on the map, to not create a Promise if the key doesn't exist anymore
                 if (activeExecutionsCache.map.get(key) === prom) {

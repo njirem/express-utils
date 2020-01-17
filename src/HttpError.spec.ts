@@ -176,7 +176,7 @@ describe(HttpError, () => {
             it('should ignore, but log errors thrown in the interceptor', async () => {
                 // tslint:disable: no-console
                 const thrownError = new Error('Foo!');
-                jest.spyOn(console, 'error').mockImplementation(() => { });
+                jest.spyOn(console, 'error').mockImplementation(() => { /** Do nothing */ });
 
                 interceptor.mockRejectedValueOnce(thrownError);
                 const firstCall = await call(httpError, { interceptor });
