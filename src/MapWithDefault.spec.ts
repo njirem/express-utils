@@ -9,6 +9,11 @@ describe(MapWithDefault, () => {
         expect(map.get('hoi')).toBe('anything');
     });
 
+    it('should be able to bypass the factory function', () => {
+        expect(map.get('foo', true)).toBe(undefined);
+        expect(map.size).toBe(0);
+    });
+
     it('should be able to ask if a value exists', () => {
         expect(map.has('foo')).toBe(false);
         map.set('foo', 'bar');
@@ -36,5 +41,34 @@ describe(MapWithDefault, () => {
         map.set('key', undefined);
         expect(map.has('key')).toBe(true);
         expect(map.get('key')).toBe(undefined);
+    });
+
+    describe('as Map', () => {
+        it('should identify as a Map', () => {
+            expect(map).toEqual(expect.any(Map));
+        });
+
+        it('should be able to iterate as a regular Map', () => {
+            map.set('foo', { key: 'bar' });
+            map.get('baz');
+            expect(Array.from(map)).toEqual([
+                ['foo', { key: 'bar' }],
+                ['baz', { key: 'baz' }],
+            ]);
+        });
+
+        it('should update size correctly', () => {
+            expect(map.size).toBe(0);
+            map.get('foo');
+            expect(map.size).toBe(1);
+            map.delete('foo');
+            expect(map.size).toBe(0);
+        });
+
+        it('should be able to be prefilled as a Map', () => {
+            const filled = new MapWithDefault((key: string) => key + key, [['foo', 'bar']]);
+            expect(filled.get('foo')).toBe('bar');
+            expect(filled.get('baz')).toBe('bazbaz');
+        });
     });
 });

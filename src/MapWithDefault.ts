@@ -1,18 +1,13 @@
 
-export class MapWithDefault<K, V> {
-    readonly map = new Map<K, V>();
-    constructor(private readonly factory: (key: K) => V) { }
+export class MapWithDefault<K, V> extends Map<K, V> {
+    constructor(private readonly factory: (key: K) => V, entries?: Array<[K, V]>) { super(entries); }
 
-    get(key: K) {
-        if (!this.map.has(key)) {
-            this.map.set(key, this.factory(key));
-        }
-        return this.map.get(key)!;
+    get(key: K, noDefault: true): V | undefined;
+    get(key: K, noDefault?: false): V;
+    get(key: K, noDefault?: boolean) {
+        if (noDefault || this.has(key)) { return super.get(key); }
+        const val = this.factory(key);
+        this.set(key, val);
+        return val;
     }
-
-    set(key: K, value: V) { return this.map.set(key, value); }
-
-    has(key: K) { return this.map.has(key); }
-
-    delete(key: K) { return this.map.delete(key); }
 }

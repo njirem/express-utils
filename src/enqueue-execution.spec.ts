@@ -5,7 +5,7 @@ import { MockServer } from './test';
 
 describe(enqueueExecution, () => {
     const queue = createActiveExecutionsQueue<number>();
-    afterEach(() => expect(queue.map.size).toBe(0));
+    afterEach(() => expect(queue.size).toBe(0));
 
     let called: string[][];
     beforeEach(() => called = [[]]);
